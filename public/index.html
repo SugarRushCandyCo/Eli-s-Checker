@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FilterCheck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+<style>
+  /* ── Reset & base ────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0b0c0f;
+    --surface: #12141a;
+    --border: #1e2029;
+    --muted: #3a3d4a;
+    --text: #e8eaf2;
+    --sub: #7b7f96;
+    --accent: #00e5a0;
+    --accent-dim: #00b87d;
+    --red: #ff4f6a;
+    --red-dim: #c23350;
+    --yellow: #f5c842;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+    --radius: 6px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── Layout ──────────────────────────────────────── */
+  .shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  header {
+    padding: 28px 40px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-mark {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 4px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+  .logo-mark svg { display: block; }
+
+  h1 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  h1 span { color: var(--accent); }
+
+  .tagline {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--sub);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  main {
+    padding: 40px;
+    max-width: 860px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* ── Input card ──────────────────────────────────── */
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .url-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--muted);
+    border-radius: var(--radius);
+    padding: 11px 16px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .url-input:focus { border-color: var(--accent); }
+  .url-input::placeholder { color: var(--sub); }
+
+  .filter-select {
+    background: var(--bg);
+    border: 1px solid var(--muted);
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    outline: none;
+    cursor: pointer;
+    min-width: 190px;
+    transition: border-color 0.15s;
+  }
+  .filter-select:focus { border-color: var(--accent); }
+  .filter-select option { background: #1a1c24; }
+
+  .btn {
+    padding: 11px 22px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+    transition: filter 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: #0b0c0f; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-all {
+    background: transparent;
+    border: 1px solid var(--muted);
+    color: var(--sub);
+  }
+  .btn-all:hover { border-color: var(--accent); color: var(--accent); }
+
+  .hint {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--sub);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Result area ─────────────────────────────────── */
+  #results { display: flex; flex-direction: column; gap: 12px; }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.22s ease both;
+    border-left: 3px solid transparent;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-card.blocked  { border-left-color: var(--red); }
+  .result-card.allowed  { border-left-color: var(--accent); }
+  .result-card.unknown  { border-left-color: var(--muted); }
+  .result-card.loading  { border-left-color: var(--yellow); }
+
+  .result-meta { display: flex; flex-direction: column; gap: 4px; }
+  .result-filter {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+  .result-category {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--sub);
+  }
+
+  .badge {
+    padding: 5px 13px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .badge-blocked  { background: rgba(255,79,106,0.15); color: var(--red); }
+  .badge-allowed  { background: rgba(0,229,160,0.12); color: var(--accent); }
+  .badge-unknown  { background: rgba(90,94,120,0.2); color: var(--sub); }
+  .badge-loading  { background: rgba(245,200,66,0.12); color: var(--yellow); }
+
+  /* pulse for loading */
+  .badge-loading {
+    animation: pulse 1.2s ease infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.45; }
+  }
+
+  /* ── Spinner ─────────────────────────────────────── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--muted);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Empty state ─────────────────────────────────── */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--sub);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+  }
+  .empty svg { opacity: 0.25; margin-bottom: 14px; }
+
+  /* ── Footer ──────────────────────────────────────── */
+  footer {
+    padding: 18px 40px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header>
+  <div class="logo-mark">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="7" stroke="#0b0c0f" stroke-width="2"/>
+      <path d="M10 5v5l3 3" stroke="#0b0c0f" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <h1>Filter<span>Check</span></h1>
+  <span class="tagline">school filter inspector</span>
+</header>
+
+<main>
+  <div class="input-card">
+    <div class="row">
+      <input
+        id="urlInput"
+        class="url-input"
+        type="text"
+        placeholder="https://example.com"
+        spellcheck="false"
+        autocomplete="off"
+      />
+      <select id="filterSelect" class="filter-select">
+        <option value="">Loading filters…</option>
+      </select>
+    </div>
+    <div class="row">
+      <button class="btn btn-primary" id="checkBtn" onclick="checkOne()">Check Filter</button>
+      <button class="btn btn-all" id="checkAllBtn" onclick="checkAll()">Check All Filters</button>
+      <span class="hint" style="margin-left:auto;align-self:center;" id="statusHint"></span>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="empty">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="2"/>
+        <path d="M14 20h12M20 14v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div>Enter a URL above and select a filter to check</div>
+    </div>
+  </div>
+</main>
+
+<footer>FilterCheck — paste your own JSON files into filters/json/ to populate categories</footer>
+
+</div>
+
+<script>
+  const API = '';  // same origin
+  let availableFilters = [];
+
+  async function loadFilters() {
+    try {
+      const res = await fetch(`${API}/api/filters`);
+      availableFilters = await res.json();
+      const sel = document.getElementById('filterSelect');
+      sel.innerHTML = availableFilters.map(f =>
+        `<option value="${f.id}">${f.label}</option>`
+      ).join('');
+      if (!availableFilters.length) {
+        sel.innerHTML = '<option value="">No filters loaded</option>';
+      }
+    } catch (e) {
+      document.getElementById('filterSelect').innerHTML =
+        '<option value="">Could not load filters</option>';
+    }
+  }
+
+  function getUrl() {
+    let url = document.getElementById('urlInput').value.trim();
+    if (url && !url.startsWith('http')) url = 'https://' + url;
+    return url;
+  }
+
+  function clearResults() {
+    document.getElementById('results').innerHTML = '';
+  }
+
+  function makeCard(filterId, label, status = 'loading', category = '', blocked = null) {
+    const card = document.createElement('div');
+    card.className = `result-card ${status}`;
+    card.id = `card-${filterId}`;
+
+    let badgeHtml;
+    if (status === 'loading') {
+      badgeHtml = `<span class="badge badge-loading"><span class="spinner"></span>Checking</span>`;
+    } else if (blocked === true) {
+      badgeHtml = `<span class="badge badge-blocked">Blocked</span>`;
+    } else if (blocked === false) {
+      badgeHtml = `<span class="badge badge-allowed">Allowed</span>`;
+    } else {
+      badgeHtml = `<span class="badge badge-unknown">Unknown</span>`;
+    }
+
+    card.innerHTML = `
+      <div class="result-meta">
+        <div class="result-filter">${label}</div>
+        <div class="result-category">${category || (status === 'loading' ? 'querying…' : 'no category')}</div>
+      </div>
+      ${badgeHtml}
+    `;
+    return card;
+  }
+
+  function updateCard(filterId, label, blocked, category) {
+    const existing = document.getElementById(`card-${filterId}`);
+    const status = (blocked === true) ? 'blocked' : (blocked === false) ? 'allowed' : 'unknown';
+    const newCard = makeCard(filterId, label, status, category, blocked);
+    // Remove animation so it doesn't re-animate
+    newCard.style.animation = 'none';
+    if (existing) {
+      existing.replaceWith(newCard);
+    } else {
+      document.getElementById('results').appendChild(newCard);
+    }
+  }
+
+  function setHint(text) {
+    document.getElementById('statusHint').textContent = text;
+  }
+
+  async function checkOne() {
+    const url = getUrl();
+    const filterId = document.getElementById('filterSelect').value;
+    if (!url) { alert('Please enter a URL.'); return; }
+    if (!filterId) { alert('Please select a filter.'); return; }
+
+    const filter = availableFilters.find(f => f.id === filterId);
+    clearResults();
+    document.getElementById('results').appendChild(makeCard(filterId, filter?.label ?? filterId));
+    setHint('');
+
+    try {
+      const res = await fetch(`${API}/api/check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, filterId }),
+      });
+      const data = await res.json();
+      updateCard(data.filterId, data.label, data.blocked, data.category);
+      setHint('Done.');
+    } catch (e) {
+      updateCard(filterId, filter?.label ?? filterId, null, 'Request failed');
+      setHint('Error.');
+    }
+  }
+
+  async function checkAll() {
+    const url = getUrl();
+    if (!url) { alert('Please enter a URL.'); return; }
+
+    clearResults();
+    const container = document.getElementById('results');
+
+    // Show a loading card for each filter
+    availableFilters.forEach(f => {
+      container.appendChild(makeCard(f.id, f.label, 'loading'));
+    });
+    setHint(`Checking ${availableFilters.length} filters…`);
+
+    try {
+      const res = await fetch(`${API}/api/check-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const results = await res.json();
+      results.forEach(r => updateCard(r.filterId, r.label, r.blocked, r.category));
+      const blocked = results.filter(r => r.blocked === true).length;
+      const allowed = results.filter(r => r.blocked === false).length;
+      setHint(`${blocked} blocked · ${allowed} allowed · ${results.length - blocked - allowed} unknown`);
+    } catch (e) {
+      setHint('Request failed.');
+    }
+  }
+
+  // Allow Enter key to submit
+  document.getElementById('urlInput')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkOne();
+  });
+
+  loadFilters();
+</script>
+</body>
+</html>
